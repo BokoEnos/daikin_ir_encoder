@@ -1,0 +1,47 @@
+name: Publish
+
+# Fires when a GitHub Release is published (i.e. you click "Publish release"
+# in the GitHub UI). The release tag should match the version in pyproject.toml
+# (e.g. tag "v0.1.0" with pyproject version "0.1.0").
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # The "pypi" environment must be configured in repo Settings → Environments.
+    # Use it to add an optional manual review gate before publishing.
+    environment:
+      name: pypi
+      url: https://pypi.org/project/daikin-ir-encoder/
+    permissions:
+      # Required for PyPI's OIDC trusted-publishing handshake.
+      id-token: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
